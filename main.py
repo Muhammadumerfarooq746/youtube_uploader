@@ -9,7 +9,19 @@ import time,os
 from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
 
 import yt_dlp as youtube_dl
+def getLastshortUrl(username):
+    url = "https://www.youtube.com/@" + username
 
+    res = requests.get(url)
+
+    videoId = res.text.split('"reelWatchEndpoint":{"videoId":', 1)[-1].split(',', 1)[0].replace('"', '').strip()
+    video_url = f"https://www.youtube.com/shorts/{videoId}"
+    if "!DOCTYPE" in video_url:
+        # print("URL is not valid: It contains a <!DOCTYPE declaration.")
+        getLastVideoUrl(username)
+        return None    
+    return video_url
+    
 
 
 def getLastVideoUrl(username):
@@ -19,18 +31,21 @@ def getLastVideoUrl(username):
 
     videoId = res.text.split('"watchEndpoint":{"videoId":',1)[-1].split(',',1)[0].replace('"','').strip()
     video_url = f"https://www.youtube.com/watch?v={videoId}"
-
+    if "!DOCTYPE" in video_url:
+        # print("URL is not valid: It contains a <!DOCTYPE declaration.")
+        getLastshortUrl(username)
+        return None
     return video_url
 
-def getLastshortUrl(username):
-    url = "https://www.youtube.com/@" + username
+# def getLastshortUrl(username):
+#     url = "https://www.youtube.com/@" + username
 
-    res = requests.get(url)
+#     res = requests.get(url)
 
-    videoId = res.text.split('"reelWatchEndpoint":{"videoId":', 1)[-1].split(',', 1)[0].replace('"', '').strip()
-    video_url = f"https://www.youtube.com/shorts/{videoId}"
-
-    return video_url
+#     videoId = res.text.split('"reelWatchEndpoint":{"videoId":', 1)[-1].split(',', 1)[0].replace('"', '').strip()
+#     video_url = f"https://www.youtube.com/shorts/{videoId}"
+    
+#     return video_url
     
 
 
@@ -81,9 +96,10 @@ def checkForNewVideo(usernames):
             file.close()
         NewUrl = getLastVideoUrl(username)
         time.sleep(2)
+        
         if lastVideoUrl != NewUrl:
             results.append([username,NewUrl])
-            print("////////////////////new video found for"+ str(usernames))
+            print("////////////////////new  found for"+ str(usernames))
         else:
             print("////////////////////no   new video found for??????????" + str(usernames))
 
@@ -130,7 +146,8 @@ class YoutubeBot:
         fp = webdriver.FirefoxProfile(browserlocation)
 # browser C:\Users\Muhammad Umer\AppData\Roaming\Mozilla\Firefox\Profiles\zh4moway.default-release= webdriver.Firefox(fp)
         self.driver = webdriver.Firefox(fp,executable_path=driver_path)
-        self.driver.get(url)
+        if self.driver.get(url):
+            print("//////////////////its working")
         time.sleep(8)
         # self.driver.get('https://accounts.google.com/InteractiveLogin/signinchooser?continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Den%26next%3Dhttps%253A%252F%252Fwww.youtube.com%252Faccount%26feature%3Dredirect_login&hl=en&passive=true&service=youtube&uilel=3&ifkv=AYZoVhdkHc9zStBxCvS4mG0fI4a0Nt54FCBiOUiYTZqGSOlZMHQ_2o1_yjYgLBf4IgbM9t95fSg64Q&theme=glif&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
         create=self.driver.find_element(By.XPATH, '//*[@aria-label="Create"]').click()
@@ -143,6 +160,8 @@ class YoutubeBot:
         time.sleep(4)
 
         title_input = self.driver.find_element(By.XPATH, '(//div[@id="textbox"])[1]')
+        title_input.clear()
+
         title_input.send_keys(title)
         time.sleep(4)
 
@@ -158,11 +177,11 @@ class YoutubeBot:
         kkk= self.driver.find_element(By.XPATH, '//*[@name="VIDEO_MADE_FOR_KIDS_NOT_MFK"]').click()
         time.sleep(5)
         try:
-            for _ in range(4):
+            for _ in range(5):
                 next_button = self.driver.find_element(By.XPATH, '//div[text()="Next"]')
                 next_button.click()
                 # time.sleep(4)
-                time.sleep(5)
+                time.sleep(4)
         except:
             pass
         try:
@@ -176,7 +195,7 @@ class YoutubeBot:
 
         publish_button = self.driver.find_element(By.XPATH, '//div[text()="Publish"]')
         publish_button.click()
-        time.sleep(5*60)
+        time.sleep(3*60)
         self.driver.quit()
 
 
@@ -185,9 +204,10 @@ class YoutubeBot:
 def main():
     config = configparser.ConfigParser()
     config.read("config.ini")
-
+    print(config)
     # Get the usernames from the "Usernames" section
     usernames_str = config["Usernames"]["users"]
+    print(usernames_str)
     usernames = [username.strip() for username in usernames_str.split(",")]
     browserlocation=config["Usernames"]["location"]
     
@@ -219,12 +239,16 @@ def main():
             
                 
                 # print(_)
-                time.sleep(20)
+                time.sleep(10)
                 video_path = 'videos'
                 title = video_title
                 description = video_desc
+                
                 uploader = YoutubeBot()
+                print(uploader)
+
                 uploader.upload(browserlocation,lpath, video_title,video_desc)
+                # print(uploader)
                 # print( " new video of "+ str(usernames)) 
         except:
             print("////////////////////// no video found in this channel")
